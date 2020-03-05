@@ -129,10 +129,10 @@ def load_data_lp(dataset, use_feats, data_path):
 
 
 def load_data_nc(dataset, use_feats, data_path, split_seed):
-    if dataset in ['cora', 'pubmed', 'citeseer', 'nell']:
-        adj, features, labels, idx_train, idx_val, idx_test = load_citation_data(
-            dataset, use_feats, data_path, split_seed
-        )
+    if dataset in ['cora', 'pubmed']:
+        adj, features, labels, idx_train, idx_val, idx_test = load_citation_data(dataset, use_feats, data_path, split_seed)
+    elif dataset in ['nell']:
+        adj, features, labels, idx_train, idx_val, idx_test = load_nell_data(dataset, use_feats, data_path, split_seed)
     else:
         if dataset == 'disease_nc':
             val_prop, test_prop = 0.10, 0.60
@@ -180,6 +180,49 @@ def load_citation_data(dataset_str, use_feats, data_path, split_seed=None):
     idx_val = range(len(y), len(y) + 500)
 
     adj = nx.adjacency_matrix(nx.from_dict_of_lists(graph))
+    if not use_feats:
+        features = sp.eye(adj.shape[0])
+    return adj, features, labels, idx_train, idx_val, idx_test
+
+
+def load_nell_data(dataset_str, use_feats, data_path, split_seed=None):
+    names = ['x', 'y', 'tx', 'ty', 'allx', 'ally', 'graph']
+    objects = []
+    for i in range(len(names)):
+        with open("data/ind.{}.{}".format(dataset_str, names[i]), 'rb') as f:
+            if sys.version_info > (3, 0):
+                objects.append(pkl.load(f, encoding='latin1'))
+            else:
+                objects.append(pkl.load(f))
+
+    x, y, tx, ty, allx, ally, graph = tuple(objects)
+    test_idx_reorder = parse_index_file(os.path.join(data_path, "ind.{}.test.index".format(dataset_str)))
+    test_idx_range = np.sort(test_idx_reorder)
+    ##### added #######
+    test_idx_range_full = range(allx.shape[0], len(graph))
+    isolated_node_idx = np.setdiff1d(test_idx_range_full, test_idx_reorder)
+    tx_extended = sp.lil_matrix((len(test_idx_range_full), x.shape[1]))
+    tx_extended[test_idx_range-allx.shape[0], :] = tx
+    tx = tx_extended
+    ty_extended = np.zeros((len(test_idx_range_full), y.shape[1]))
+    ty_extended[test_idx_range-allx.shape[0], :] = ty
+    ty = ty_extended
+
+    features = sp.vstack((allx, tx)).tolil()
+    features[test_idx_reorder, :] = features[test_idx_range, :]
+    idx_all = np.setdiff1d(range(len(graph)), isolated_node_idx)
+
+    ##################
+    adj = nx.adjacency_matrix(nx.from_dict_of_lists(graph))
+
+    labels = np.vstack((ally, ty))
+    labels[test_idx_reorder, :] = labels[test_idx_range, :]
+    labels = np.argmax(labels, 1)
+
+    idx_test = test_idx_range.tolist()
+    idx_train = list(range(len(y)))
+    idx_val = range(len(y), len(y) + 500)
+
     if not use_feats:
         features = sp.eye(adj.shape[0])
     return adj, features, labels, idx_train, idx_val, idx_test

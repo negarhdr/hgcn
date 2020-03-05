@@ -133,6 +133,8 @@ def load_data_nc(dataset, use_feats, data_path, split_seed):
         adj, features, labels, idx_train, idx_val, idx_test = load_citation_data(dataset, use_feats, data_path, split_seed)
     elif dataset in ['nell']:
         adj, features, labels, idx_train, idx_val, idx_test = load_nell_data(dataset, use_feats, data_path, split_seed)
+    elif dataset in ['ppi']:
+        adj, features, labels, idx_train, idx_val, idx_test = load_ppi_data(dataset, use_feats, data_path, split_seed)
     else:
         if dataset == 'disease_nc':
             val_prop, test_prop = 0.10, 0.60
@@ -227,6 +229,14 @@ def load_nell_data(dataset_str, use_feats, data_path, split_seed=None):
         features = sp.eye(adj.shape[0])
     return adj, features, labels, idx_train, idx_val, idx_test
 
+def load_ppi_data(dataset_str, use_feats, data_path, split_seed=None):
+    adj = sp.load_npz('data/ppi/full_normadj.npz')
+    features = sp.load_npz('data/ppi/normfeatures.npz')
+    labels = np.load('data/ppi/labels.npy')
+    idx_train = np.load('data/ppi/train_idx.npy')
+    idx_val = np.load('data/ppi/val_idx.npy')
+    idx_test = np.load('data/ppi/test_idx.npy')
+    return adj, features, labels, idx_train, idx_val, idx_test
 
 def parse_index_file(filename):
     index = []

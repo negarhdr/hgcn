@@ -129,7 +129,7 @@ def load_data_lp(dataset, use_feats, data_path):
 
 
 def load_data_nc(dataset, use_feats, data_path, split_seed):
-    if dataset in ['cora', 'pubmed']:
+    if dataset in ['cora', 'pubmed', 'citeseer', 'nell']:
         adj, features, labels, idx_train, idx_val, idx_test = load_citation_data(
             dataset, use_feats, data_path, split_seed
         )
